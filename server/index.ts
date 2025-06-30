@@ -2,11 +2,7 @@ import express from "express";
 import cors from "cors";
 import { sendOTP, verifyOTP, setupProfile, getProfile } from "./routes/auth";
 import { getDashboard } from "./routes/dashboard";
-import {
-  createCircle,
-  getCircles,
-  updateCircleStatus,
-} from "./routes/transfers";
+import { updateSelections, getSelections } from "./routes/selections";
 
 export function createServer() {
   const app = express();
@@ -29,10 +25,9 @@ export function createServer() {
   // Dashboard routes
   app.get("/api/dashboard", getDashboard);
 
-  // Transfer circle routes
-  app.post("/api/transfers/create-circle", createCircle);
-  app.get("/api/transfers/circles", getCircles);
-  app.put("/api/transfers/circles/:circleId/status", updateCircleStatus);
+  // Teacher selection routes
+  app.post("/api/selections", updateSelections);
+  app.get("/api/selections", getSelections);
 
   return app;
 }

@@ -38,10 +38,14 @@ export const getDashboard: RequestHandler = async (req, res) => {
       (teacher) => teacher.teacherType === currentUser.teacherType,
     );
 
+    // Get user's selections and circles
+    const mySelections = storage.getTeacherSelections(currentUser.id);
+    const myCircles = storage.getCirclesForTeacher(currentUser.id);
+
     const dashboardData: DashboardResponse = {
       teachers,
-      activeCircles: [],
-      pendingRequests: [],
+      mySelections,
+      myCircles,
     };
 
     const response: APIResponse = {
