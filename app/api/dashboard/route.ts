@@ -4,9 +4,8 @@ import { storage } from "@/lib/storage";
 
 export async function GET(request: NextRequest) {
   try {
-    const token =
-      request.headers.get("authorization")?.replace("Bearer ", "") ||
-      request.cookies.get("auth-token")?.value;
+    const authHeader = request.headers.get("authorization");
+    const token = authHeader?.replace("Bearer ", "");
 
     if (!token) {
       const response: APIResponse = {

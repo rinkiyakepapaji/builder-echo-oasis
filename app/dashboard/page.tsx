@@ -58,12 +58,29 @@ export default function DashboardPage() {
   const router = useRouter();
 
   useEffect(() => {
+    // Check if token exists
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.push("/login");
+      return;
+    }
     fetchDashboardData();
-  }, []);
+  }, [router]);
+
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("token");
+    return {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    };
+  };
 
   const fetchDashboardData = async () => {
     try {
-      const response = await fetch("/api/dashboard");
+      const response = await fetch("/api/dashboard", {
+        headers: getAuthHeaders(),
+      });
+
       const data: APIResponse<DashboardResponse> = await response.json();
 
       if (data.success && data.data) {
@@ -81,7 +98,11 @@ export default function DashboardPage() {
         fetchCurrentUser();
       } else {
         setError(data.message || "Failed to load dashboard");
-        if (data.message?.includes("token")) {
+        if (
+          data.message?.includes("token") ||
+          data.message?.includes("Authorization")
+        ) {
+          localStorage.removeItem("token");
           router.push("/login");
         }
       }
@@ -94,7 +115,10 @@ export default function DashboardPage() {
 
   const fetchCurrentUser = async () => {
     try {
-      const response = await fetch("/api/auth/profile");
+      const response = await fetch("/api/auth/profile", {
+        headers: getAuthHeaders(),
+      });
+
       const data: APIResponse<Teacher> = await response.json();
       if (data.success && data.data) {
         setCurrentUser(data.data);
@@ -105,7 +129,7 @@ export default function DashboardPage() {
   };
 
   const handleLogout = () => {
-    // Clear any client-side storage and redirect
+    localStorage.removeItem("token");
     router.push("/login");
   };
 
@@ -141,9 +165,7 @@ export default function DashboardPage() {
 
       const response = await fetch("/api/selections", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(request),
       });
 
@@ -217,7 +239,7 @@ export default function DashboardPage() {
               <div>
                 <h1 className="text-xl font-bold">TeacherConnect</h1>
                 <p className="text-primary-foreground/80 text-sm">
-                  Teacher Transfer Platform
+                  Teacher Transfer Platform - Next.js Version
                 </p>
               </div>
             </div>

@@ -50,16 +50,7 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    // Set HTTP-only cookie for token
-    const nextResponse = NextResponse.json(response);
-    nextResponse.cookies.set("auth-token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-    });
-
-    return nextResponse;
+    return NextResponse.json(response);
   } catch (error) {
     console.error("Error verifying OTP:", error);
     const response: APIResponse = {

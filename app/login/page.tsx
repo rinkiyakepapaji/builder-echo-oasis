@@ -80,7 +80,9 @@ export default function LoginPage() {
       const data: APIResponse = await response.json();
 
       if (data.success) {
-        // Token is set as HTTP-only cookie
+        // Store token in localStorage
+        localStorage.setItem("token", data.data.token);
+
         if (data.data.teacher) {
           router.push("/dashboard");
         } else {
@@ -110,6 +112,7 @@ export default function LoginPage() {
           <p className="text-white/80 mt-2">
             Bihar Government Teacher Transfer Platform
           </p>
+          <p className="text-white/60 text-sm mt-1">Next.js Version</p>
         </div>
 
         {/* Login Card */}
@@ -188,6 +191,9 @@ export default function LoginPage() {
                       required
                     />
                   </div>
+                  <p className="text-sm text-muted-foreground">
+                    Check browser console for OTP (demo mode)
+                  </p>
                 </div>
 
                 <div className="flex gap-2">
