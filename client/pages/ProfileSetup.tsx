@@ -86,8 +86,8 @@ export default function ProfileSetup() {
   const [formData, setFormData] = useState({
     name: "",
     schoolName: "",
-    teacherType: "" as TeacherType | "",
-    district: "",
+    teacherType: undefined as TeacherType | undefined,
+    district: undefined as string | undefined,
     block: "",
   });
   const [loading, setLoading] = useState(false);
@@ -222,7 +222,7 @@ export default function ProfileSetup() {
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="teacherType">Teacher Type</Label>
                   <Select
-                    value={formData.teacherType}
+                    value={formData.teacherType || ""}
                     onValueChange={(value) =>
                       setFormData({
                         ...formData,
@@ -250,7 +250,7 @@ export default function ProfileSetup() {
                 <div className="space-y-2">
                   <Label htmlFor="district">District</Label>
                   <Select
-                    value={formData.district}
+                    value={formData.district || ""}
                     onValueChange={(value) =>
                       setFormData({ ...formData, district: value })
                     }
