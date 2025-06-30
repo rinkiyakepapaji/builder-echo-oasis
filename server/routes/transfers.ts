@@ -1,35 +1,9 @@
 import { RequestHandler } from "express";
 import { TransferCircle, Teacher, APIResponse } from "@shared/api";
+import { storage } from "../storage";
 
 // Mock database - replace with real database
 let mockCircles: TransferCircle[] = [];
-
-// Mock teachers database (same as other files - in real app, use shared DB)
-const mockTeachers: Teacher[] = [
-  {
-    id: "1",
-    name: "Rajesh Kumar",
-    phoneNumber: "9876543210",
-    schoolName: "Govt. Primary School Patna",
-    teacherType: "primary",
-    district: "Patna",
-    block: "Patna Sadar",
-    isVerified: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  // Add more mock teachers as needed
-];
-
-// Access global mock data
-const getMockTokens = () => (global as any).mockTokens || {};
-const getMockTeachers = () => (global as any).mockTeachers || mockTeachers;
-
-// Verify token
-function verifyToken(token: string): string | null {
-  const tokens = getMockTokens();
-  return tokens[token] || null;
-}
 
 // Send notification (mock implementation)
 async function sendNotifications(circle: TransferCircle) {
@@ -67,7 +41,7 @@ export const createCircle: RequestHandler = async (req, res) => {
       return res.status(401).json(response);
     }
 
-    const phoneNumber = verifyToken(token);
+    const phoneNumber = storage.getPhoneByToken(token);
     if (!phoneNumber) {
       const response: APIResponse = {
         success: false,
@@ -95,7 +69,7 @@ export const createCircle: RequestHandler = async (req, res) => {
     }
 
     // Get current user
-    const currentUser = mockTeachers.find((t) => t.phoneNumber === phoneNumber);
+    const currentUser = storage.getTeacherByPhone(phoneNumber);
     if (!currentUser) {
       const response: APIResponse = {
         success: false,
@@ -105,7 +79,8 @@ export const createCircle: RequestHandler = async (req, res) => {
     }
 
     // Get selected teachers
-    const selectedTeachers = mockTeachers.filter((t) =>
+    const allTeachers = storage.getAllTeachers();
+    const selectedTeachers = allTeachers.filter((t) =>
       teacherIds.includes(t.id),
     );
 
