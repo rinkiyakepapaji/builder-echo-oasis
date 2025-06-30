@@ -21,12 +21,14 @@ const mockTeachers: Teacher[] = [
   // Add more mock teachers as needed
 ];
 
-// Mock JWT tokens - replace with real JWT implementation
-const mockTokens: Record<string, string> = {};
+// Access global mock data
+const getMockTokens = () => (global as any).mockTokens || {};
+const getMockTeachers = () => (global as any).mockTeachers || mockTeachers;
 
 // Verify token
 function verifyToken(token: string): string | null {
-  return mockTokens[token] || null;
+  const tokens = getMockTokens();
+  return tokens[token] || null;
 }
 
 // Send notification (mock implementation)

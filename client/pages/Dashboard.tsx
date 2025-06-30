@@ -178,7 +178,7 @@ export default function Dashboard() {
   });
 
   const uniqueDistricts = Array.from(
-    new Set(teachers.map((t) => t.district)),
+    new Set(teachers.map((t) => t.district).filter(Boolean)),
   ).sort();
 
   const getInitials = (name: string) => {
@@ -289,11 +289,15 @@ export default function Dashboard() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">All Districts</SelectItem>
-                      {uniqueDistricts.map((district) => (
-                        <SelectItem key={district} value={district}>
-                          {district}
-                        </SelectItem>
-                      ))}
+                      {uniqueDistricts
+                        .filter(
+                          (district) => district && district.trim() !== "",
+                        )
+                        .map((district) => (
+                          <SelectItem key={district} value={district}>
+                            {district}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>

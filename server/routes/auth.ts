@@ -55,6 +55,10 @@ const otpStorage: Record<string, { otp: string; expires: Date }> = {};
 // Mock JWT tokens - replace with real JWT implementation
 const mockTokens: Record<string, string> = {};
 
+// Make these available globally
+(global as any).mockTokens = mockTokens;
+(global as any).mockTeachers = mockTeachers;
+
 // Generate random OTP
 function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -64,12 +68,15 @@ function generateOTP(): string {
 function generateToken(phoneNumber: string): string {
   const token = `token_${phoneNumber}_${Date.now()}`;
   mockTokens[token] = phoneNumber;
+  console.log(`Generated token: ${token} for phone: ${phoneNumber}`);
   return token;
 }
 
 // Verify token
 function verifyToken(token: string): string | null {
-  return mockTokens[token] || null;
+  const phoneNumber = mockTokens[token];
+  console.log(`Verifying token: ${token}, found phone: ${phoneNumber}`);
+  return phoneNumber || null;
 }
 
 export const sendOTP: RequestHandler = async (req, res) => {

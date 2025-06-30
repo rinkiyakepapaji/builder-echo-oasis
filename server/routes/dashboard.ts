@@ -125,12 +125,18 @@ const mockTeachers: Teacher[] = [
   },
 ];
 
-// Mock JWT tokens - replace with real JWT implementation
-const mockTokens: Record<string, string> = {};
+// Access global mock data
+const getMockTokens = () => (global as any).mockTokens || {};
+const getMockTeachers = () => (global as any).mockTeachers || mockTeachers;
 
 // Verify token
 function verifyToken(token: string): string | null {
-  return mockTokens[token] || null;
+  const tokens = getMockTokens();
+  const phoneNumber = tokens[token];
+  console.log(
+    `Dashboard verifying token: ${token}, found phone: ${phoneNumber}`,
+  );
+  return phoneNumber || null;
 }
 
 export const getDashboard: RequestHandler = async (req, res) => {
@@ -154,7 +160,8 @@ export const getDashboard: RequestHandler = async (req, res) => {
     }
 
     // Get current user
-    const currentUser = mockTeachers.find((t) => t.phoneNumber === phoneNumber);
+    const allTeachers = getMockTeachers();
+    const currentUser = allTeachers.find((t) => t.phoneNumber === phoneNumber);
     if (!currentUser) {
       const response: APIResponse = {
         success: false,
@@ -164,7 +171,7 @@ export const getDashboard: RequestHandler = async (req, res) => {
     }
 
     // Filter teachers of the same type
-    const teachers = mockTeachers.filter(
+    const teachers = allTeachers.filter(
       (teacher) => teacher.teacherType === currentUser.teacherType,
     );
 
