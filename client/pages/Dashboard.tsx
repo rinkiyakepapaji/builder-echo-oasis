@@ -31,17 +31,28 @@ import {
   School,
   RefreshCw,
   Phone,
+  Save,
+  Target,
 } from "lucide-react";
 import TeacherCard from "@/components/TeacherCard";
-import { Teacher, DashboardResponse, APIResponse } from "@shared/api";
+import TransferCircleCard from "@/components/TransferCircleCard";
+import {
+  Teacher,
+  DashboardResponse,
+  APIResponse,
+  TransferCircle,
+  SelectTeachersRequest,
+} from "@shared/api";
 
 export default function Dashboard() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [currentUser, setCurrentUser] = useState<Teacher | null>(null);
   const [selectedTeachers, setSelectedTeachers] = useState<Teacher[]>([]);
+  const [myCircles, setMyCircles] = useState<TransferCircle[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [districtFilter, setDistrictFilter] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
@@ -67,6 +78,15 @@ export default function Dashboard() {
 
       if (data.success && data.data) {
         setTeachers(data.data.teachers);
+        setMyCircles(data.data.myCircles || []);
+
+        // Set selected teachers based on current selections
+        const selectedIds = data.data.mySelections || [];
+        const selected = data.data.teachers.filter((t) =>
+          selectedIds.includes(t.id),
+        );
+        setSelectedTeachers(selected);
+
         // Get current user from token or separate endpoint
         fetchCurrentUser();
       } else {
@@ -103,13 +123,13 @@ export default function Dashboard() {
   };
 
   const handleSelectTeacher = (teacher: Teacher) => {
-    if (selectedTeachers.length >= 9) {
-      setError("Maximum 9 teachers can be selected for a transfer circle");
+    if (teacher.id === currentUser?.id) {
+      setError("You cannot select yourself for transfer");
       return;
     }
 
-    if (teacher.id === currentUser?.id) {
-      setError("You cannot select yourself for transfer");
+    if (selectedTeachers.some((t) => t.id === teacher.id)) {
+      setError("Teacher already selected");
       return;
     }
 
@@ -121,44 +141,40 @@ export default function Dashboard() {
     setSelectedTeachers(selectedTeachers.filter((t) => t.id !== teacher.id));
   };
 
-  const handleCreateCircle = async () => {
-    if (selectedTeachers.length < 1) {
-      setError("Please select at least 1 other teacher");
-      return;
-    }
+  const handleSaveSelections = async () => {
+    if (!currentUser) return;
 
-    if (selectedTeachers.length > 9) {
-      setError("Maximum 9 teachers allowed in a circle");
-      return;
-    }
+    setSaving(true);
+    setError("");
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("/api/transfers/create-circle", {
+      const request: SelectTeachersRequest = {
+        selectedTeacherIds: selectedTeachers.map((t) => t.id),
+      };
+
+      const response = await fetch("/api/selections", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          teacherIds: selectedTeachers.map((t) => t.id),
-        }),
+        body: JSON.stringify(request),
       });
 
       const data: APIResponse = await response.json();
 
       if (data.success) {
-        setSelectedTeachers([]);
-        setError("");
-        // Show success message or navigate to circles page
-        alert(
-          "Transfer circle created successfully! All members will be notified.",
-        );
+        setMyCircles(data.data?.myCircles || []);
+        // Refresh dashboard data to get latest circles
+        setTimeout(() => fetchDashboardData(), 1000);
       } else {
-        setError(data.message || "Failed to create transfer circle");
+        setError(data.message || "Failed to save selections");
       }
     } catch (err) {
       setError("Network error. Please try again.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -252,6 +268,22 @@ export default function Dashboard() {
       </header>
 
       <div className="container mx-auto px-4 py-8">
+        {/* My Transfer Circles */}
+        {myCircles.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Target className="h-5 w-5 text-primary" />
+              <h2 className="text-xl font-semibold">My Transfer Circles</h2>
+              <Badge variant="secondary">{myCircles.length}</Badge>
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {myCircles.map((circle) => (
+                <TransferCircleCard key={circle.id} circle={circle} />
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="grid lg:grid-cols-4 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-3 space-y-6">
@@ -265,7 +297,7 @@ export default function Dashboard() {
                 <CardDescription>
                   Search for teachers of your type (
                   {currentUser?.teacherType.replace("-", " ")}) for mutual
-                  transfer
+                  transfer. Select teachers you want to transfer with.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -335,7 +367,7 @@ export default function Dashboard() {
                     No teachers found
                   </h3>
                   <p className="text-muted-foreground">
-                    {searchTerm || districtFilter
+                    {searchTerm || districtFilter !== "all"
                       ? "Try adjusting your search criteria"
                       : "No other teachers of your type are currently registered"}
                   </p>
@@ -344,18 +376,16 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Sidebar - Selected Teachers */}
+          {/* Sidebar - My Selections */}
           <div className="space-y-6">
             <Card className="sticky top-4">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
-                  <span>Transfer Circle</span>
-                  <Badge variant="secondary">
-                    {selectedTeachers.length + 1}/10
-                  </Badge>
+                  <span>My Selections</span>
+                  <Badge variant="secondary">{selectedTeachers.length}</Badge>
                 </CardTitle>
                 <CardDescription>
-                  Selected teachers for mutual transfer
+                  Teachers I want to transfer with
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -414,21 +444,30 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {selectedTeachers.length > 0 && (
-                  <Button
-                    onClick={handleCreateCircle}
-                    className="w-full"
-                    disabled={selectedTeachers.length < 1}
-                  >
-                    Create Transfer Circle
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                )}
+                <Button
+                  onClick={handleSaveSelections}
+                  className="w-full"
+                  disabled={saving}
+                >
+                  {saving ? (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Save Selections
+                    </>
+                  )}
+                </Button>
 
                 <div className="text-xs text-muted-foreground space-y-1">
-                  <p>• Minimum 2 members (including you)</p>
-                  <p>• Maximum 10 members total</p>
-                  <p>• All members will be notified</p>
+                  <p>• Select teachers you want to transfer with</p>
+                  <p>
+                    • Circles form when 2-10 teachers mutually select each other
+                  </p>
+                  <p>• You'll be notified when circles are formed</p>
                 </div>
               </CardContent>
             </Card>
