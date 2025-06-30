@@ -40,7 +40,7 @@ export default function Dashboard() {
   const [currentUser, setCurrentUser] = useState<Teacher | null>(null);
   const [selectedTeachers, setSelectedTeachers] = useState<Teacher[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [districtFilter, setDistrictFilter] = useState("");
+  const [districtFilter, setDistrictFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const navigate = useNavigate();
@@ -172,7 +172,9 @@ export default function Dashboard() {
       teacher.phoneNumber.includes(searchTerm);
 
     const matchesDistrict =
-      !districtFilter || teacher.district === districtFilter;
+      !districtFilter ||
+      districtFilter === "all" ||
+      teacher.district === districtFilter;
 
     return matchesSearch && matchesDistrict;
   });
@@ -288,7 +290,7 @@ export default function Dashboard() {
                       </div>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Districts</SelectItem>
+                      <SelectItem value="all">All Districts</SelectItem>
                       {uniqueDistricts
                         .filter(
                           (district) => district && district.trim() !== "",
