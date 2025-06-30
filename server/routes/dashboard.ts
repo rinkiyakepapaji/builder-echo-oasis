@@ -1,143 +1,6 @@
 import { RequestHandler } from "express";
 import { Teacher, DashboardResponse, APIResponse } from "@shared/api";
-
-// Mock database - replace with real database
-const mockTeachers: Teacher[] = [
-  {
-    id: "1",
-    name: "Rajesh Kumar",
-    phoneNumber: "9876543210",
-    schoolName: "Govt. Primary School Patna",
-    teacherType: "primary",
-    district: "Patna",
-    block: "Patna Sadar",
-    isVerified: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "2",
-    name: "Priya Singh",
-    phoneNumber: "9876543211",
-    schoolName: "Govt. Middle School Gaya",
-    teacherType: "primary",
-    district: "Gaya",
-    block: "Gaya Sadar",
-    isVerified: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "3",
-    name: "Amit Sharma",
-    phoneNumber: "9876543212",
-    schoolName: "Govt. High School Muzaffarpur",
-    teacherType: "primary",
-    district: "Muzaffarpur",
-    block: "Muzaffarpur Sadar",
-    isVerified: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "4",
-    name: "Sunita Devi",
-    phoneNumber: "9876543213",
-    schoolName: "Govt. Primary School Bhagalpur",
-    teacherType: "primary",
-    district: "Bhagalpur",
-    block: "Bhagalpur Sadar",
-    isVerified: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "5",
-    name: "Ramesh Yadav",
-    phoneNumber: "9876543214",
-    schoolName: "Govt. Middle School Darbhanga",
-    teacherType: "primary",
-    district: "Darbhanga",
-    block: "Darbhanga Sadar",
-    isVerified: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "6",
-    name: "Geeta Kumari",
-    phoneNumber: "9876543215",
-    schoolName: "Govt. Primary School Sitamarhi",
-    teacherType: "primary",
-    district: "Sitamarhi",
-    block: "Sitamarhi Sadar",
-    isVerified: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "7",
-    name: "Vikash Kumar",
-    phoneNumber: "9876543216",
-    schoolName: "Govt. Middle School Begusarai",
-    teacherType: "upper-primary",
-    district: "Begusarai",
-    block: "Begusarai Sadar",
-    isVerified: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "8",
-    name: "Kavita Singh",
-    phoneNumber: "9876543217",
-    schoolName: "Govt. Middle School Samastipur",
-    teacherType: "upper-primary",
-    district: "Samastipur",
-    block: "Samastipur Sadar",
-    isVerified: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "9",
-    name: "Manoj Jha",
-    phoneNumber: "9876543218",
-    schoolName: "Govt. High School Madhubani",
-    teacherType: "secondary",
-    district: "Madhubani",
-    block: "Madhubani Sadar",
-    isVerified: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "10",
-    name: "Renu Sharma",
-    phoneNumber: "9876543219",
-    schoolName: "Govt. High School Vaishali",
-    teacherType: "secondary",
-    district: "Vaishali",
-    block: "Vaishali Sadar",
-    isVerified: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-];
-
-// Access global mock data
-const getMockTokens = () => (global as any).mockTokens || {};
-const getMockTeachers = () => (global as any).mockTeachers || mockTeachers;
-
-// Verify token
-function verifyToken(token: string): string | null {
-  const tokens = getMockTokens();
-  const phoneNumber = tokens[token];
-  console.log(
-    `Dashboard verifying token: ${token}, found phone: ${phoneNumber}`,
-  );
-  return phoneNumber || null;
-}
+import { storage } from "../storage";
 
 export const getDashboard: RequestHandler = async (req, res) => {
   try {
@@ -150,7 +13,7 @@ export const getDashboard: RequestHandler = async (req, res) => {
       return res.status(401).json(response);
     }
 
-    const phoneNumber = verifyToken(token);
+    const phoneNumber = storage.getPhoneByToken(token);
     if (!phoneNumber) {
       const response: APIResponse = {
         success: false,
@@ -160,8 +23,7 @@ export const getDashboard: RequestHandler = async (req, res) => {
     }
 
     // Get current user
-    const allTeachers = getMockTeachers();
-    const currentUser = allTeachers.find((t) => t.phoneNumber === phoneNumber);
+    const currentUser = storage.getTeacherByPhone(phoneNumber);
     if (!currentUser) {
       const response: APIResponse = {
         success: false,
@@ -171,6 +33,7 @@ export const getDashboard: RequestHandler = async (req, res) => {
     }
 
     // Filter teachers of the same type
+    const allTeachers = storage.getAllTeachers();
     const teachers = allTeachers.filter(
       (teacher) => teacher.teacherType === currentUser.teacherType,
     );

@@ -23,14 +23,11 @@ export const sendOTP: RequestHandler = async (req, res) => {
     }
 
     // Generate and store OTP
-    const otp = generateOTP();
-    otpStorage[phoneNumber] = {
-      otp,
-      expires: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
-    };
+    const otp = storage.generateOTP();
+    storage.setOTP(phoneNumber, otp);
 
     // In real implementation, send OTP via SMS
-    console.log(`OTP for ${phoneNumber}: ${otp}`);
+    console.log(`📱 OTP for ${phoneNumber}: ${otp}`);
 
     const response: APIResponse = {
       success: true,
@@ -59,7 +56,7 @@ export const verifyOTP: RequestHandler = async (req, res) => {
       return res.status(400).json(response);
     }
 
-    const storedOTP = otpStorage[phoneNumber];
+    const storedOTP = storage.getOTP(phoneNumber);
     if (!storedOTP || storedOTP.expires < new Date()) {
       const response: APIResponse = {
         success: false,
@@ -77,13 +74,13 @@ export const verifyOTP: RequestHandler = async (req, res) => {
     }
 
     // Remove used OTP
-    delete otpStorage[phoneNumber];
+    storage.deleteOTP(phoneNumber);
 
     // Generate token
-    const token = generateToken(phoneNumber);
+    const token = storage.generateToken(phoneNumber);
 
     // Check if teacher exists
-    const teacher = mockTeachers.find((t) => t.phoneNumber === phoneNumber);
+    const teacher = storage.getTeacherByPhone(phoneNumber);
 
     const response: APIResponse = {
       success: true,
@@ -115,7 +112,7 @@ export const setupProfile: RequestHandler = async (req, res) => {
       return res.status(401).json(response);
     }
 
-    const phoneNumber = verifyToken(token);
+    const phoneNumber = storage.getPhoneByToken(token);
     if (!phoneNumber) {
       const response: APIResponse = {
         success: false,
@@ -154,8 +151,8 @@ export const setupProfile: RequestHandler = async (req, res) => {
       updatedAt: new Date(),
     };
 
-    // Add to mock database
-    mockTeachers.push(newTeacher);
+    // Add to storage
+    storage.addTeacher(newTeacher);
 
     const response: APIResponse = {
       success: true,
@@ -184,7 +181,7 @@ export const getProfile: RequestHandler = async (req, res) => {
       return res.status(401).json(response);
     }
 
-    const phoneNumber = verifyToken(token);
+    const phoneNumber = storage.getPhoneByToken(token);
     if (!phoneNumber) {
       const response: APIResponse = {
         success: false,
@@ -193,7 +190,7 @@ export const getProfile: RequestHandler = async (req, res) => {
       return res.status(401).json(response);
     }
 
-    const teacher = mockTeachers.find((t) => t.phoneNumber === phoneNumber);
+    const teacher = storage.getTeacherByPhone(phoneNumber);
     if (!teacher) {
       const response: APIResponse = {
         success: false,
