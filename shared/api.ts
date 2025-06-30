@@ -48,23 +48,33 @@ export interface ProfileSetupRequest {
   block: string;
 }
 
-export interface TransferRequest {
-  fromTeacherId: string;
-  toTeacherIds: string[];
+// Teacher selection - each teacher can select multiple others
+export interface TeacherSelection {
+  id: string;
+  teacherId: string;
+  selectedTeacherIds: string[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
+// Transfer circle - automatically formed when mutual selections exist
 export interface TransferCircle {
   id: string;
+  circleNumber: number; // Circle 1, Circle 2, etc.
   teachers: Teacher[];
-  status: "pending" | "confirmed" | "rejected";
+  status: "active" | "completed" | "expired";
   createdAt: Date;
   expiresAt: Date;
 }
 
 export interface DashboardResponse {
   teachers: Teacher[];
-  activeCircles: TransferCircle[];
-  pendingRequests: TransferRequest[];
+  mySelections: string[]; // IDs of teachers I've selected
+  myCircles: TransferCircle[]; // Circles I'm part of
+}
+
+export interface SelectTeachersRequest {
+  selectedTeacherIds: string[];
 }
 
 export interface NotificationRequest {

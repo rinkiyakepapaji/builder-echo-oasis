@@ -1,4 +1,4 @@
-import { Teacher } from "@shared/api";
+import { Teacher, TeacherSelection, TransferCircle } from "@shared/api";
 
 // Shared storage for mock data - replace with real database in production
 export class MockStorage {
@@ -127,6 +127,9 @@ export class MockStorage {
     },
   ];
   private otpStorage: Record<string, { otp: string; expires: Date }> = {};
+  private teacherSelections: TeacherSelection[] = [];
+  private transferCircles: TransferCircle[] = [];
+  private circleCounter = 0;
 
   public static getInstance(): MockStorage {
     if (!MockStorage.instance) {
@@ -160,6 +163,10 @@ export class MockStorage {
     return this.teachers.find((t) => t.phoneNumber === phoneNumber);
   }
 
+  public getTeacherById(id: string): Teacher | undefined {
+    return this.teachers.find((t) => t.id === id);
+  }
+
   public addTeacher(teacher: Teacher): void {
     this.teachers.push(teacher);
     console.log(`👨‍🏫 Teacher added: ${teacher.name} (${teacher.phoneNumber})`);
@@ -171,6 +178,187 @@ export class MockStorage {
 
     this.teachers[index] = { ...this.teachers[index], ...updates };
     return this.teachers[index];
+  }
+
+  // Teacher Selection methods
+  public updateTeacherSelections(
+    teacherId: string,
+    selectedTeacherIds: string[],
+  ): void {
+    // Remove existing selections for this teacher
+    this.teacherSelections = this.teacherSelections.filter(
+      (s) => s.teacherId !== teacherId,
+    );
+
+    // Add new selection
+    if (selectedTeacherIds.length > 0) {
+      const selection: TeacherSelection = {
+        id: `selection_${Date.now()}_${Math.random()}`,
+        teacherId,
+        selectedTeacherIds,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      this.teacherSelections.push(selection);
+      console.log(
+        `✅ Selections updated for teacher ${teacherId}: ${selectedTeacherIds.length} teachers selected`,
+      );
+    }
+
+    // Check for new circles after updating selections
+    this.detectAndCreateCircles();
+  }
+
+  public getTeacherSelections(teacherId: string): string[] {
+    const selection = this.teacherSelections.find(
+      (s) => s.teacherId === teacherId,
+    );
+    return selection ? selection.selectedTeacherIds : [];
+  }
+
+  // Circle detection and management
+  private detectAndCreateCircles(): void {
+    const potentialCircles = this.findMutualSelectionGroups();
+
+    potentialCircles.forEach((teacherIds) => {
+      // Check if this circle already exists
+      const existingCircle = this.transferCircles.find(
+        (circle) =>
+          circle.teachers.length === teacherIds.length &&
+          teacherIds.every((id) => circle.teachers.some((t) => t.id === id)),
+      );
+
+      if (!existingCircle) {
+        this.createTransferCircle(teacherIds);
+      }
+    });
+  }
+
+  private findMutualSelectionGroups(): string[][] {
+    const groups: string[][] = [];
+    const visited = new Set<string>();
+
+    // Get all teachers who have made selections
+    const activeTeachers = this.teacherSelections.map((s) => s.teacherId);
+
+    for (const teacherId of activeTeachers) {
+      if (visited.has(teacherId)) continue;
+
+      const group = this.findConnectedGroup(teacherId, new Set());
+
+      // Only consider groups of 2-10 members
+      if (group.size >= 2 && group.size <= 10) {
+        const groupArray = Array.from(group);
+
+        // Check if this is a valid mutual selection group
+        if (this.isValidMutualGroup(groupArray)) {
+          groups.push(groupArray);
+          groupArray.forEach((id) => visited.add(id));
+        }
+      }
+    }
+
+    return groups;
+  }
+
+  private findConnectedGroup(
+    teacherId: string,
+    visited: Set<string>,
+  ): Set<string> {
+    visited.add(teacherId);
+    const group = new Set([teacherId]);
+
+    const selections = this.getTeacherSelections(teacherId);
+
+    for (const selectedId of selections) {
+      // Check if selected teacher also selected this teacher (mutual)
+      const mutualSelections = this.getTeacherSelections(selectedId);
+      if (mutualSelections.includes(teacherId)) {
+        group.add(selectedId);
+
+        // Recursively find connected teachers
+        if (!visited.has(selectedId)) {
+          const connectedGroup = this.findConnectedGroup(selectedId, visited);
+          connectedGroup.forEach((id) => group.add(id));
+        }
+      }
+    }
+
+    return group;
+  }
+
+  private isValidMutualGroup(teacherIds: string[]): boolean {
+    // Check if all teachers in the group have mutually selected each other
+    for (let i = 0; i < teacherIds.length; i++) {
+      const teacherId = teacherIds[i];
+      const selections = this.getTeacherSelections(teacherId);
+
+      // Check if this teacher selected all other teachers in the group
+      const otherTeachers = teacherIds.filter((id) => id !== teacherId);
+      const hasSelectedAll = otherTeachers.every((otherId) =>
+        selections.includes(otherId),
+      );
+
+      if (!hasSelectedAll) return false;
+    }
+
+    return true;
+  }
+
+  private createTransferCircle(teacherIds: string[]): void {
+    const teachers = teacherIds
+      .map((id) => this.getTeacherById(id))
+      .filter(Boolean) as Teacher[];
+
+    if (teachers.length !== teacherIds.length) {
+      console.error("Some teachers not found when creating circle");
+      return;
+    }
+
+    this.circleCounter++;
+
+    const circle: TransferCircle = {
+      id: `circle_${Date.now()}_${Math.random()}`,
+      circleNumber: this.circleCounter,
+      teachers,
+      status: "active",
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+    };
+
+    this.transferCircles.push(circle);
+
+    console.log(
+      `🎯 New transfer circle created: Circle ${circle.circleNumber} with ${teachers.length} teachers`,
+    );
+    console.log(`Members: ${teachers.map((t) => t.name).join(", ")}`);
+
+    // Send notifications
+    this.sendCircleNotifications(circle);
+  }
+
+  private sendCircleNotifications(circle: TransferCircle): void {
+    console.log(`🔔 CIRCLE ${circle.circleNumber} FORMED! 🔔`);
+    console.log(`📅 Created: ${circle.createdAt.toLocaleString()}`);
+    console.log(`👥 Members (${circle.teachers.length}):`);
+    circle.teachers.forEach((teacher, index) => {
+      console.log(
+        `  ${index + 1}. ${teacher.name} - ${teacher.phoneNumber} (${teacher.schoolName})`,
+      );
+    });
+    console.log(`📧 Email & WhatsApp notifications sent to all members`);
+    console.log(`⏰ Circle expires: ${circle.expiresAt.toLocaleDateString()}`);
+    console.log("═".repeat(60));
+  }
+
+  public getCirclesForTeacher(teacherId: string): TransferCircle[] {
+    return this.transferCircles.filter((circle) =>
+      circle.teachers.some((teacher) => teacher.id === teacherId),
+    );
+  }
+
+  public getAllCircles(): TransferCircle[] {
+    return this.transferCircles;
   }
 
   // OTP methods
